@@ -1,7 +1,7 @@
 import { registerAs } from '@nestjs/config';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { join } from 'path';
-import { loadEnvironmentForCli, validateEnvironment } from './env.validation';
+import { loadEnvironmentForCli, validateDbEnvironment } from './env.validation';
 import { Users } from '../modules/users/entities/user.entity';
 import { Products } from '../modules/products/entities/products.entity';
 import { Categories } from '../modules/categories/entities/category.entity';
@@ -9,7 +9,7 @@ import { Orders } from '../modules/orders/entities/order.entity';
 import { OrderItem } from '../modules/orders/entities/orderDetails.entity';
 
 loadEnvironmentForCli();
-const environment = validateEnvironment(process.env);
+const environment = validateDbEnvironment(process.env);
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',

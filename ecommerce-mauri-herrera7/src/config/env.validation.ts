@@ -29,15 +29,13 @@ export function loadEnvironmentForCli(): void {
   }
 }
 
-export function validateEnvironment(
+/** Validates only the database-related environment variables.
+ * Used by the TypeORM config (migrations, CLI) which does not need
+ * app-level secrets such as JWT_SECRET. */
+export function validateDbEnvironment(
   input: Record<string, unknown>,
 ): Environment {
   const environment = input as Environment;
-  const nodeEnv = environment.NODE_ENV ?? 'development';
-
-  if (!['development', 'test', 'production'].includes(nodeEnv)) {
-    throw new Error('NODE_ENV must be development, test, or production');
-  }
 
   const databaseUrl = environment.DATABASE_URL?.trim();
   if (databaseUrl) {
@@ -54,6 +52,23 @@ export function validateEnvironment(
       required(environment, key);
     }
   }
+
+  integer(environment, 'DB_PORT', 5432);
+
+  return environment;
+}
+
+export function validateEnvironment(
+  input: Record<string, unknown>,
+): Environment {
+  const environment = input as Environment;
+  const nodeEnv = environment.NODE_ENV ?? 'development';
+
+  if (!['development', 'test', 'production'].includes(nodeEnv)) {
+    throw new Error('NODE_ENV must be development, test, or production');
+  }
+
+  validateDbEnvironment(input);
 
   required(environment, 'JWT_SECRET');
 
@@ -75,7 +90,6 @@ export function validateEnvironment(
   }
 
   integer(environment, 'PORT', 3000);
-  integer(environment, 'DB_PORT', 5432);
   integer(environment, 'RATE_LIMIT_WINDOW_MS', 60_000);
   integer(environment, 'RATE_LIMIT_MAX', 10);
 
