@@ -9,7 +9,7 @@ services:
     dockerfilePath: Dockerfile
     dockerContext: .
     dockerCommand: >-
-      sh -c 'npm run migration:run:prod && exec node dist/main'
+      sh -c 'node ./node_modules/typeorm/cli.js migration:run -d ./dist/config/typeorm.js && exec node dist/main'
     healthCheckPath: /health/ready
     autoDeployTrigger: checksPass
     buildFilter:
