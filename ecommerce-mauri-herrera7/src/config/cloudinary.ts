@@ -5,10 +5,17 @@ export const CloudinaryConfig = {
   provide: 'CLOUDINARY',
   inject: [ConfigService],
   useFactory: (configService: ConfigService) => {
+    const cloudName = configService.get<string>('CLOUD_NAME');
+    const apiKey = configService.get<string>('API_KEY');
+    const apiSecret = configService.get<string>('API_SECRET');
+    if (!cloudName || !apiKey || !apiSecret) {
+      return undefined;
+    }
+
     cloudinary.config({
-      cloud_name: configService.getOrThrow<string>('CLOUD_NAME'),
-      api_key: configService.getOrThrow<string>('API_KEY'),
-      api_secret: configService.getOrThrow<string>('API_SECRET'),
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
     });
     return cloudinary;
   },

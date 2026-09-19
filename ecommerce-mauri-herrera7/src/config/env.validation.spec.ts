@@ -19,12 +19,6 @@ describe('validateEnvironment', () => {
     ).toThrow('JWT_SECRET must contain at least 32 characters');
   });
 
-  it('requires an explicit CORS allowlist in production', () => {
-    expect(() =>
-      validateEnvironment({ ...validEnvironment(), NODE_ENV: 'production' }),
-    ).toThrow('Missing required environment variable: CORS_ORIGINS');
-  });
-
   it('accepts a complete production configuration', () => {
     expect(
       validateEnvironment({
@@ -36,6 +30,29 @@ describe('validateEnvironment', () => {
       NODE_ENV: 'production',
       CORS_ORIGINS: 'https://shop.example',
     });
+  });
+
+  it('allows an API-only deployment without CORS or Cloudinary', () => {
+    const apiOnlyEnvironment = validEnvironment();
+    delete apiOnlyEnvironment.CLOUD_NAME;
+    delete apiOnlyEnvironment.API_KEY;
+    delete apiOnlyEnvironment.API_SECRET;
+
+    expect(
+      validateEnvironment({
+        ...apiOnlyEnvironment,
+        NODE_ENV: 'production',
+      }),
+    ).toMatchObject({ NODE_ENV: 'production' });
+  });
+
+  it('requires all Cloudinary credentials when image uploads are configured', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment(),
+        API_SECRET: undefined,
+      }),
+    ).toThrow('CLOUD_NAME, API_KEY and API_SECRET must be configured together');
   });
 
   it('accepts a PostgreSQL connection URL instead of split database values', () => {

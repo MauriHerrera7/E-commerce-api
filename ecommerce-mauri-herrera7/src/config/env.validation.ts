@@ -2,9 +2,6 @@ import { config as loadDotenv } from 'dotenv';
 
 type Environment = Record<string, string | undefined>;
 
-const isProduction = (environment: Environment) =>
-  environment.NODE_ENV === 'production';
-
 const required = (environment: Environment, key: string): string => {
   const value = environment[key]?.trim();
   if (!value) {
@@ -58,16 +55,23 @@ export function validateEnvironment(
     }
   }
 
-  for (const key of ['JWT_SECRET', 'CLOUD_NAME', 'API_KEY', 'API_SECRET']) {
-    required(environment, key);
+  required(environment, 'JWT_SECRET');
+
+  const cloudinaryKeys = ['CLOUD_NAME', 'API_KEY', 'API_SECRET'];
+  const configuredCloudinaryKeys = cloudinaryKeys.filter((key) =>
+    Boolean(environment[key]?.trim()),
+  );
+  if (
+    configuredCloudinaryKeys.length > 0 &&
+    configuredCloudinaryKeys.length !== cloudinaryKeys.length
+  ) {
+    throw new Error(
+      'CLOUD_NAME, API_KEY and API_SECRET must be configured together',
+    );
   }
 
   if (required(environment, 'JWT_SECRET').length < 32) {
     throw new Error('JWT_SECRET must contain at least 32 characters');
-  }
-
-  if (isProduction({ ...environment, NODE_ENV: nodeEnv })) {
-    required(environment, 'CORS_ORIGINS');
   }
 
   integer(environment, 'PORT', 3000);

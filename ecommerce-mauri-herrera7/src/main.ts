@@ -8,17 +8,16 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
-  const isProduction = configService.get<string>('NODE_ENV') === 'production';
 
   app.enableShutdownHooks();
-  app.enableCors({
-    origin: configService
-      .get<string>('CORS_ORIGINS', 'http://localhost:3001')
-      .split(',')
-      .map((origin) => origin.trim()),
-    credentials: true,
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
-  });
+  const corsOrigins = configService.get<string>('CORS_ORIGINS');
+  if (corsOrigins) {
+    app.enableCors({
+      origin: corsOrigins.split(',').map((origin) => origin.trim()),
+      credentials: true,
+      methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+    });
+  }
   app.useGlobalFilters(new HttpExceptionFilter());
 
   const swaggerDoc = new DocumentBuilder()
@@ -30,10 +29,7 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
 
-  if (
-    !isProduction &&
-    configService.get<string>('ENABLE_SWAGGER', 'true') === 'true'
-  ) {
+  if (configService.get<string>('ENABLE_SWAGGER', 'false') === 'true') {
     const document = SwaggerModule.createDocument(app, swaggerDoc);
     SwaggerModule.setup('api', app, document);
   }
