@@ -6,8 +6,8 @@ services:
     plan: 0.5c-512mb
     branch: main
     rootDir: ecommerce-mauri-herrera7
-    dockerfilePath: ecommerce-mauri-herrera7/Dockerfile
-    dockerContext: ecommerce-mauri-herrera7
+    dockerfilePath: Dockerfile
+    dockerContext: .
     healthCheckPath: /health/ready
     preDeployCommand: npm run migration:run:prod
     autoDeployTrigger: checksPass
