@@ -13,11 +13,14 @@ const environment = validateEnvironment(process.env);
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
-  host: environment.DB_HOST,
-  port: Number(environment.DB_PORT ?? 5432),
-  username: environment.DB_USERNAME,
-  password: environment.DB_PASSWORD,
-  database: environment.DB_NAME,
+  url: environment.DATABASE_URL,
+  host: environment.DATABASE_URL ? undefined : environment.DB_HOST,
+  port: environment.DATABASE_URL
+    ? undefined
+    : Number(environment.DB_PORT ?? 5432),
+  username: environment.DATABASE_URL ? undefined : environment.DB_USERNAME,
+  password: environment.DATABASE_URL ? undefined : environment.DB_PASSWORD,
+  database: environment.DATABASE_URL ? undefined : environment.DB_NAME,
   ssl: environment.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
   dropSchema: false,
   synchronize: false,

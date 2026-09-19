@@ -37,4 +37,21 @@ describe('validateEnvironment', () => {
       CORS_ORIGINS: 'https://shop.example',
     });
   });
+
+  it('accepts a PostgreSQL connection URL instead of split database values', () => {
+    const renderEnvironment = validEnvironment();
+    delete renderEnvironment.DB_HOST;
+    delete renderEnvironment.DB_USERNAME;
+    delete renderEnvironment.DB_PASSWORD;
+    delete renderEnvironment.DB_NAME;
+
+    expect(
+      validateEnvironment({
+        ...renderEnvironment,
+        DATABASE_URL: 'postgresql://user:password@database.internal:5432/shop',
+      }),
+    ).toMatchObject({
+      DATABASE_URL: 'postgresql://user:password@database.internal:5432/shop',
+    });
+  });
 });

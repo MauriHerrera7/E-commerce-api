@@ -1,0 +1,57 @@
+services:
+  - type: web
+    name: ecommerce-api
+    runtime: docker
+    region: virginia
+    plan: 0.5c-512mb
+    branch: main
+    rootDir: ecommerce-mauri-herrera7
+    dockerfilePath: ecommerce-mauri-herrera7/Dockerfile
+    dockerContext: ecommerce-mauri-herrera7
+    healthCheckPath: /health/ready
+    preDeployCommand: npm run migration:run:prod
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - ecommerce-mauri-herrera7/**
+        - render.yaml
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_SSL
+        value: "false"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ecommerce-api-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: CORS_ORIGINS
+        sync: false
+      - key: CLOUD_NAME
+        sync: false
+      - key: API_KEY
+        sync: false
+      - key: API_SECRET
+        sync: false
+      - key: CLOUDINARY_FOLDER
+        value: ecommerce/products
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "60000"
+      - key: RATE_LIMIT_MAX
+        value: "10"
+      - key: ENABLE_SWAGGER
+        value: "false"
+
+databases:
+  - name: ecommerce-api-db
+    databaseName: ecommerce
+    user: ecommerce
+    region: virginia
+    plan: 0.5c-1g
+    diskSizeGB: 5
+    postgresMajorVersion: "16"
+    storageAutoscalingEnabled: true
+    ipAllowList: []

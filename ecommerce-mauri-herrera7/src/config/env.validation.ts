@@ -42,16 +42,23 @@ export function validateEnvironment(
     throw new Error('NODE_ENV must be development, test, or production');
   }
 
-  for (const key of [
-    'DB_HOST',
-    'DB_USERNAME',
-    'DB_PASSWORD',
-    'DB_NAME',
-    'JWT_SECRET',
-    'CLOUD_NAME',
-    'API_KEY',
-    'API_SECRET',
-  ]) {
+  const databaseUrl = environment.DATABASE_URL?.trim();
+  if (databaseUrl) {
+    try {
+      const url = new URL(databaseUrl);
+      if (!['postgres:', 'postgresql:'].includes(url.protocol)) {
+        throw new Error();
+      }
+    } catch {
+      throw new Error('DATABASE_URL must be a valid PostgreSQL connection URL');
+    }
+  } else {
+    for (const key of ['DB_HOST', 'DB_USERNAME', 'DB_PASSWORD', 'DB_NAME']) {
+      required(environment, key);
+    }
+  }
+
+  for (const key of ['JWT_SECRET', 'CLOUD_NAME', 'API_KEY', 'API_SECRET']) {
     required(environment, key);
   }
 

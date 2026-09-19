@@ -24,7 +24,7 @@ La documentación Swagger está disponible sólo fuera de producción, por defec
 
 ## Variables de entorno
 
-Copiar [`.env.example`](.env.example). Las variables obligatorias son `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET`, `CLOUD_NAME`, `API_KEY` y `API_SECRET`.
+Copiar [`.env.example`](.env.example). Las variables obligatorias son `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET`, `CLOUD_NAME`, `API_KEY` y `API_SECRET`. Como alternativa, los cuatro valores de base de datos pueden reemplazarse por `DATABASE_URL`, pensado para proveedores administrados como Render.
 
 - `JWT_SECRET` debe tener por lo menos 32 caracteres y provenir de un gestor de secretos.
 - En producción, `CORS_ORIGINS` es obligatorio y debe contener los orígenes de frontend separados por coma.
@@ -93,6 +93,16 @@ El [Dockerfile](Dockerfile) construye una imagen multi-stage y ejecuta el proces
 5. Active HTTPS en el proxy de borde. La app añade HSTS en producción.
 
 Los logs HTTP se emiten como JSON e incluyen `requestId`, método, ruta, código y duración. Los endpoints de salud nunca exponen secretos.
+
+### Render
+
+El Blueprint [`render.yaml`](../render.yaml) está en la raíz del repositorio porque esta API vive en el subdirectorio `ecommerce-mauri-herrera7`. Al crear un **New > Blueprint** en Render y seleccionar este repositorio, provisiona:
+
+- Un Web Service Docker en Virginia, con health check en `/health/ready` y despliegue automático sólo después de que pase CI.
+- Una instancia Render Postgres 16 en la misma región, conectada por red privada. La base no acepta conexiones públicas.
+- Migraciones antes de cada despliegue mediante `npm run migration:run:prod`.
+
+Render genera `JWT_SECRET` y solicitará durante el primer alta `CORS_ORIGINS`, `CLOUD_NAME`, `API_KEY` y `API_SECRET`. Usar el origen exacto del frontend en `CORS_ORIGINS`; no incluir secretos en el repositorio. El Blueprint usa planes administrados mínimos (`0.5c-512mb` web y `0.5c-1g` Postgres); revisarlos en Render antes de crear recursos porque son facturables.
 
 ## Pendiente de integrar antes del cobro real
 
