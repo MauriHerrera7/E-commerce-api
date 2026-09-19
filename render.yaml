@@ -8,8 +8,6 @@ services:
     rootDir: ecommerce-mauri-herrera7
     dockerfilePath: Dockerfile
     dockerContext: .
-    dockerCommand: >-
-      /bin/sh -c "node ./node_modules/typeorm/cli.js migration:run -d ./dist/config/typeorm.js && exec node dist/main"
     healthCheckPath: /health/ready
     autoDeployTrigger: checksPass
     buildFilter:

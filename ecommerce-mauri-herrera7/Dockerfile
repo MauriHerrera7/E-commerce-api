@@ -15,4 +15,4 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 3000
-CMD ["node", "dist/main"]
+CMD ["/bin/sh", "-c", "node ./node_modules/typeorm/cli.js migration:run -d ./dist/config/typeorm.js && exec node dist/main"]
