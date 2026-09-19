@@ -1,13 +1,12 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class Namechange1751943562701 implements MigrationInterface {
+  /** Kept as a no-op to preserve the identifier used by older local databases. */
+  public async up(_queryRunner: QueryRunner): Promise<void> {
+    await Promise.resolve(_queryRunner);
+  }
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE users RENAME COLUMN name TO mauricio`);
-    }
-
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE users RENAME COLUMN mauricio TO name`);
-    }
-
+  public async down(_queryRunner: QueryRunner): Promise<void> {
+    await Promise.resolve(_queryRunner);
+  }
 }

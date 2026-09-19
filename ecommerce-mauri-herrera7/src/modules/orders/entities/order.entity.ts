@@ -1,20 +1,61 @@
-import { Users } from "src/modules/users/entities/user.entity";
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
-import { OrderDetails } from "./orderDetails.entity";
+import { Users } from 'src/modules/users/entities/user.entity';
+import { decimalTransformer } from '../../../config/decimal.transformer';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import type { Relation } from 'typeorm';
+import { OrderItem } from './orderDetails.entity';
 
-@Entity({ name: 'ORDERS' })
+export enum OrderStatus {
+  Pending = 'pending',
+  Paid = 'paid',
+  Cancelled = 'cancelled',
+}
 
+@Index('UQ_orders_user_idempotency_key', ['user', 'idempotencyKey'], {
+  unique: true,
+})
+@Entity({ name: 'orders' })
 export class Orders {
-@PrimaryGeneratedColumn('uuid')
-id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-@Column()
-date: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
-@OneToOne(()=> OrderDetails, (orderDetails)=> orderDetails.order)
-orderDetails: OrderDetails;
+  @Column({ type: 'varchar', length: 20, default: OrderStatus.Pending })
+  status: OrderStatus;
 
-@ManyToOne(()=> Users, (user) => user.order) 
-@JoinColumn({ name: 'user_id' })
-user: Users;
+  @Column({
+    name: 'idempotency_key',
+    type: 'varchar',
+    length: 128,
+    nullable: true,
+  })
+  idempotencyKey?: string | null;
+
+  @Column({
+    type: 'numeric',
+    precision: 10,
+    scale: 2,
+    transformer: decimalTransformer,
+  })
+  total: number;
+
+  @OneToMany(() => OrderItem, (orderItem) => orderItem.order, { cascade: true })
+  items: Relation<OrderItem[]>;
+
+  @ManyToOne(() => Users, (user) => user.orders, {
+    nullable: false,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({ name: 'user_id' })
+  user: Relation<Users>;
 }

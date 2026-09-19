@@ -1,0 +1,16 @@
+# Dependencies and build artefacts
+node_modules/
+dist/
+coverage/
+.npm-cache/
+*.tsbuildinfo
+
+# Secrets: keep the documented template only
+.env
+.env.*
+*.env
+!.env.example
+
+# Local tooling
+.DS_Store
+npm-debug.log*

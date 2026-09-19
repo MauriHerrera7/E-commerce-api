@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Users } from './entities/user.entity';
@@ -12,40 +16,36 @@ export class UsersService {
     private readonly usersRepository: Repository<Users>,
   ) {}
 
-  async findAll(page: number, limit: number):Promise<PaginatedUsersDTO> {
-    const Allusers = await this.usersRepository.find();
-
-    const start = (page - 1) * limit;
-    const end = start + limit;
-
-   const users = Allusers.slice(start, end);
-    
-   if (!users) {
-      throw new NotFoundException('NO HAY USUARIOS REGISTRADOS');
+  async findAll(page: number, limit: number): Promise<PaginatedUsersDTO> {
+    if (page < 1 || limit < 1 || limit > 100) {
+      throw new BadRequestException(
+        'page must be positive and limit must be between 1 and 100',
+      );
     }
+    const [users, total] = await this.usersRepository.findAndCount({
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { email: 'ASC' },
+    });
 
     return {
-    data: users,
-    total: Allusers.length,
-    page,
-    limit,
-    totalPages: Math.ceil(Allusers.length / limit),
-  };
-
+      data: users,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findById(id: string) {
     const user = await this.usersRepository.findOne({
       where: { id },
-      relations: { order: true },
+      relations: { orders: true },
     });
-    if (!user){
+    if (!user) {
       throw new NotFoundException('USUARIO NO ENCONTRADO');
     }
-    return {
-      message: 'USUARIO ENCONTRADO',
-      user,
-    }
+    return { message: 'USUARIO ENCONTRADO', user };
   }
 
   async delete(id: string) {
@@ -55,20 +55,31 @@ export class UsersService {
       throw new NotFoundException('USUARIO NO ENCONTRADO');
     }
 
-    await this.usersRepository.delete(id);
+    await this.usersRepository.softDelete(id);
 
     return {
       message: 'USUARIO ELIMINADO CORRECTAMENTE',
-      user: userToDelete,
     };
   }
 
-  async update(id: string, userData: Partial<Users>): Promise<CreateAndUpdateUserResponseDTO> {
+  async update(
+    id: string,
+    userData: Partial<Users>,
+  ): Promise<CreateAndUpdateUserResponseDTO> {
+    if (userData.email) {
+      const existing = await this.usersRepository.findOneBy({
+        email: userData.email,
+      });
+      if (existing && existing.id !== id) {
+        throw new BadRequestException('EMAIL ALREADY IN USE');
+      }
+    }
     await this.usersRepository.update(id, userData);
 
-    const updatedUser = await this.usersRepository.findOne(
-      {where: { id },
-  select: ['id', 'name', 'email', 'phone', 'country', 'city', 'address', ]})
+    const updatedUser = await this.usersRepository.findOne({
+      where: { id },
+      select: ['id', 'name', 'email', 'phone', 'country', 'city', 'address'],
+    });
 
     if (!updatedUser) {
       throw new NotFoundException('USUARIO NO ENCONTRADO');
@@ -79,8 +90,4 @@ export class UsersService {
       data: updatedUser,
     };
   }
- save(id:string ){
-  return this.usersRepository.update(id, {isAdmin: true});
-}
-  
 }

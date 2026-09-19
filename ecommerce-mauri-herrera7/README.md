@@ -1,524 +1,99 @@
-# 🛒 E-commerce Backend API
+# E-commerce API
 
-## 📋 Descripción
+API REST de e-commerce construida con NestJS, PostgreSQL, TypeORM y Cloudinary.
 
-Este proyecto consiste en el desarrollo del backend de una plataforma de e-commerce construida con **NestJS**. Utiliza una arquitectura modular para gestionar productos, categorías, usuarios, órdenes y autenticación, proporcionando una API REST completa y segura.
+## Puesta en marcha local
 
-## 🚀 Tecnologías Utilizadas
-
-- **NestJS** - Framework de Node.js para aplicaciones escalables
-- **TypeScript** - Lenguaje de programación tipado
-- **TypeORM** - ORM para bases de datos
-- **PostgreSQL** - Base de datos relacional
-- **JWT** - Autenticación y autorización
-- **Swagger** - Documentación de API
-- **Bcrypt** - Encriptación de contraseñas
-- **Cloudinary** - Gestión de imágenes
-- **Class Validator** - Validación de datos
-
-## 📦 Instalación
+Requiere Node.js 22.12+ (se recomienda Node.js 24) y PostgreSQL 16+.
 
 ```bash
-# Clonar el repositorio
-git clone <repository-url>
-
-# Instalar dependencias
-npm install
-
-# Configurar variables de entorno
-cp .env.example .env
-
-# Ejecutar migraciones
+npm ci
+Copy-Item .env.example .env
+# Completar .env con credenciales locales válidas
 npm run migration:run
-
-# Iniciar el servidor de desarrollo
 npm run start:dev
 ```
 
-## 🔧 Scripts Disponibles
+Para una base local con Docker, puede usarse la plantilla incluida:
 
 ```bash
-npm run start          # Iniciar aplicación
-npm run start:dev      # Iniciar en modo desarrollo
-npm run start:prod     # Iniciar en modo producción
-npm run build          # Construir aplicación
-npm run test           # Ejecutar tests
-npm run lint           # Linter
-npm run migration:run  # Ejecutar migraciones
+docker compose -f docker-compose.example.yml up -d
 ```
 
-## 📚 Documentación de API
+La documentación Swagger está disponible sólo fuera de producción, por defecto en `http://localhost:3000/api`.
 
-La documentación completa de la API está disponible en: `http://localhost:3000/api` (Swagger UI)
+## Variables de entorno
 
----
+Copiar [`.env.example`](.env.example). Las variables obligatorias son `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET`, `CLOUD_NAME`, `API_KEY` y `API_SECRET`.
 
-## 🔐 Autenticación y Usuarios
+- `JWT_SECRET` debe tener por lo menos 32 caracteres y provenir de un gestor de secretos.
+- En producción, `CORS_ORIGINS` es obligatorio y debe contener los orígenes de frontend separados por coma.
+- `DB_SSL=true` habilita SSL para PostgreSQL administrado.
+- No se versionan archivos `.env`; las credenciales expuestas anteriormente deben revocarse y reemplazarse antes de publicar.
 
-### 1. Registro de Usuario
+## Seguridad y autorización
 
-**Endpoint:** `POST /auth/register`
-
-Permite registrar un nuevo usuario en el sistema.
-
-**Cuerpo de la petición:**
-```json
-{
-  "email": "usuario@ejemplo.com",
-  "name": "Juan Pérez",
-  "password": "MiPassword123!",
-  "confirmPassword": "MiPassword123!",
-  "address": "Calle Falsa 123",
-  "phone": 123456789,
-  "country": "Argentina",
-  "city": "Buenos Aires"
-}
-```
-
-**Validaciones:**
-- Email válido y único
-- Nombre mínimo 3 caracteres
-- Contraseña: 8-15 caracteres, debe incluir mayúscula, minúscula, número y carácter especial
-- Confirmación de contraseña debe coincidir
-- Dirección: 3-80 caracteres
-- País y ciudad: 5-20 caracteres
-
-**Respuesta exitosa:**
-```json
-{
-  "success": "USUARIO REGISTRADO CON ÉXITO",
-  "data": {
-    "id": "uuid",
-    "email": "usuario@ejemplo.com",
-    "name": "Juan Pérez",
-    "address": "Calle Falsa 123",
-    "phone": 123456789,
-    "country": "Argentina",
-    "city": "Buenos Aires",
-    "isAdmin": false
-  }
-}
-```
-
-### 2. Login de Usuario
-
-**Endpoint:** `POST /auth/login`
-
-Permite autenticar a un usuario existente.
-
-**Cuerpo de la petición:**
-```json
-{
-  "email": "usuario@ejemplo.com",
-  "password": "MiPassword123!"
-}
-```
-
-**Respuesta exitosa:**
-```json
-{
-  "message": "USUARIO LOGEADO CORRECTAMENTE",
-  "token": "jwt-token-here",
-  "user": {
-    "id": "uuid",
-    "email": "usuario@ejemplo.com",
-    "name": "Juan Pérez",
-    "isAdmin": false
-  }
-}
-```
-
----
-
-## 👥 Gestión de Usuarios
-
-### 3. Obtener Todos los Usuarios (Solo Administradores)
-
-**Endpoint:** `GET /users`
-**Autenticación:** Bearer Token requerido
-**Permisos:** Solo administradores
-
-**Parámetros de consulta opcionales:**
-- `page`: Número de página (default: 1)
-- `limit`: Elementos por página (default: 5)
-
-**Ejemplo:** `GET /users?page=1&limit=10`
-
-### 4. Obtener Usuario por ID (Solo Administradores)
-
-**Endpoint:** `GET /users/:id`
-**Autenticación:** Bearer Token requerido
-**Permisos:** Solo administradores
-
-### 5. Actualizar Usuario (Solo Administradores)
-
-**Endpoint:** `PUT /users/:id`
-**Autenticación:** Bearer Token requerido
-**Permisos:** Solo administradores
-
-### 6. Eliminar Usuario (Solo Administradores)
-
-**Endpoint:** `DELETE /users/:id`
-**Autenticación:** Bearer Token requerido
-**Permisos:** Solo administradores
-
----
-
-## 🏷️ Categorías
-
-### 7. Obtener Todas las Categorías
-
-**Endpoint:** `GET /categories`
-
-Obtiene todas las categorías disponibles con paginación.
-
-**Parámetros de consulta opcionales:**
-- `page`: Número de página (default: 1)
-- `limit`: Elementos por página (default: 5)
-
-**Ejemplo:** `GET /categories?page=1&limit=10`
-
-### 8. Seeder de Categorías
-
-**Endpoint:** `GET /categories/seeder`
-
-Genera categorías predeterminadas en la base de datos para desarrollo y testing.
-
----
-
-## 📦 Productos
-
-### 9. Obtener Todos los Productos
-
-**Endpoint:** `GET /products`
-
-Obtiene todos los productos disponibles con paginación.
-
-**Parámetros de consulta opcionales:**
-- `page`: Número de página (default: 1)
-- `limit`: Elementos por página (default: 5)
-
-**Ejemplo:** `GET /products?page=1&limit=10`
-
-**Respuesta:**
-```json
-{
-  "data": [
-    {
-      "id": "uuid",
-      "name": "Producto Ejemplo",
-      "description": "Descripción del producto",
-      "price": 99.99,
-      "stock": 50,
-      "imgUrl": "https://example.com/image.jpg",
-      "category": {
-        "id": "uuid",
-        "name": "Categoría"
-      }
-    }
-  ],
-  "totalPages": 5,
-  "currentPage": 1
-}
-```
-
-### 10. Actualizar Producto (Solo Administradores)
-
-**Endpoint:** `PUT /products/:id`
-**Autenticación:** Bearer Token requerido
-**Permisos:** Solo administradores
-
-**Cuerpo de la petición:**
-```json
-{
-  "name": "Nuevo nombre del producto",
-  "description": "Nueva descripción",
-  "price": 149.99,
-  "stock": 25
-}
-```
-
-**Respuesta exitosa:**
-```json
-{
-  "message": "PRODUCTO ACTUALIZADO CORRECTAMENTE",
-  "product": {
-    "id": "uuid",
-    "name": "Nuevo nombre del producto",
-    "description": "Nueva descripción",
-    "price": 149.99,
-    "stock": 25
-  }
-}
-```
-
-### 11. Seeder de Productos
-
-**Endpoint:** `GET /products/seeder`
-
-Genera productos predeterminados en la base de datos para desarrollo y testing.
-
----
-
-## 🛍️ Órdenes de Compra
-
-### 12. Crear Nueva Orden
-
-**Endpoint:** `POST /orders`
-
-Permite crear una nueva orden de compra.
-
-**Cuerpo de la petición:**
-```json
-{
-  "userId": "e25479b9-26b3-43c3-936a-518500f0f44e",
-  "products": [
-    {
-      "id": "product-uuid-1"
-    },
-    {
-      "id": "product-uuid-2"
-    }
-  ]
-}
-```
-
-**Validaciones:**
-- `userId`: Debe ser un UUID válido
-- `products`: Debe ser un arreglo con al menos un producto
-
-**Respuesta exitosa:**
-```json
-{
-  "id": "order-uuid",
-  "date": "2024-01-15T10:30:00.000Z",
-  "user": {
-    "id": "user-uuid",
-    "name": "Juan Pérez"
-  },
-  "orderDetails": [
-    {
-      "id": "detail-uuid",
-      "price": 99.99,
-      "product": {
-        "id": "product-uuid",
-        "name": "Producto Ejemplo"
-      }
-    }
-  ]
-}
-```
-
-### 13. Obtener Detalle de Orden
-
-**Endpoint:** `GET /orders/:id`
-
-Obtiene los detalles completos de una orden específica.
-
-**Parámetros:**
-- `id`: UUID de la orden
-
-**Respuesta:**
-```json
-{
-  "id": "order-uuid",
-  "date": "2024-01-15T10:30:00.000Z",
-  "user": {
-    "id": "user-uuid",
-    "name": "Juan Pérez",
-    "email": "usuario@ejemplo.com"
-  },
-  "orderDetails": [
-    {
-      "id": "detail-uuid",
-      "price": 99.99,
-      "product": {
-        "id": "product-uuid",
-        "name": "Producto Ejemplo",
-        "description": "Descripción del producto"
-      }
-    }
-  ],
-  "total": 99.99
-}
-```
-
----
-
-## 📸 Subida de Archivos
-
-### 14. Subir Imagen de Producto (Solo Administradores)
-
-**Endpoint:** `POST /file/uploadImage/:productId`
-**Autenticación:** Bearer Token requerido
-**Permisos:** Solo administradores
-
-Permite subir una imagen para un producto específico.
-
-**Parámetros:**
-- `productId`: UUID del producto
-
-**Cuerpo de la petición:**
-- `file`: Archivo de imagen (multipart/form-data)
-
-**Restricciones:**
-- Tamaño máximo: 1MB
-- Formatos permitidos: jpg, jpeg, png, webp
-
-**Ejemplo con cURL:**
-```bash
-curl -X POST \
-  http://localhost:3000/file/uploadImage/product-uuid \
-  -H "Authorization: Bearer your-jwt-token" \
-  -F "file=@imagen.jpg"
-```
-
-**Respuesta exitosa:**
-```json
-{
-  "message": "Imagen subida correctamente",
-  "imageUrl": "https://cloudinary-url/imagen.jpg",
-  "product": {
-    "id": "product-uuid",
-    "name": "Producto",
-    "imgUrl": "https://cloudinary-url/imagen.jpg"
-  }
-}
-```
-
----
-
-## 🔒 Sistema de Autenticación y Autorización
-
-### Roles de Usuario
-
-El sistema maneja dos tipos de roles:
-
-1. **Usuario Regular** (`user`): Puede realizar compras y gestionar sus órdenes
-2. **Administrador** (`admin`): Tiene acceso completo a todas las funcionalidades
-
-### Protección de Rutas
-
-Las rutas protegidas requieren:
-
-1. **Token JWT válido** en el header `Authorization: Bearer <token>`
-2. **Rol adecuado** para acceder a endpoints específicos
-
-### Guards Implementados
-
-- **AuthGuard**: Verifica que el usuario esté autenticado
-- **RolesGuard**: Verifica que el usuario tenga el rol necesario
-
----
-
-## 🗄️ Base de Datos
-
-### Entidades Principales
-
-1. **User** - Usuarios del sistema
-2. **Product** - Productos disponibles
-3. **Category** - Categorías de productos
-4. **Order** - Órdenes de compra
-5. **OrderDetail** - Detalles de cada orden
-
-### Migraciones
+- Contraseñas con bcrypt y respuestas que eliminan `password` recursivamente.
+- JWT de vida corta (`JWT_EXPIRES_IN`, 15 minutos por defecto), validado mediante `Bearer` tokens.
+- Los usuarios sólo pueden editar su propio perfil; administradores pueden gestionar usuarios y catálogo.
+- No hay endpoint HTTP para otorgar permisos de administrador. Tras registrar un usuario, hacerlo administrador desde una consola de confianza:
 
 ```bash
-# Crear nueva migración
-npm run migration:create -- src/migrations/nombre-migracion
+npm run admin:grant -- user@example.com
+```
 
-# Generar migración automática
-npm run migration:generate -- src/migrations/nombre-migracion
+- Login y registro llevan limitación básica por IP. En un despliegue con varias réplicas se debe sustituir su almacenamiento en memoria por Redis.
+- Las cargas sólo aceptan JPG, PNG o WEBP de hasta 1 MB y Cloudinary las guarda como `image`.
 
-# Ejecutar migraciones
+## Órdenes
+
+`POST /orders` requiere un JWT. El usuario se deriva exclusivamente del token; nunca se acepta `userId` en el cuerpo.
+
+```json
+{
+  "items": [{ "productId": "product-uuid", "quantity": 2 }]
+}
+```
+
+El checkout requiere además un header `Idempotency-Key` único por intención de compra (hasta 128 caracteres). El mismo usuario puede reintentar esa clave sin duplicar la orden ni descontar stock otra vez. El checkout combina productos repetidos, bloquea las filas de producto durante la operación, valida stock antes de persistir y descuenta inventario dentro de una transacción. Cada ítem conserva `unitPrice` y `productName` como instantánea histórica. Un cliente sólo puede consultar sus propias órdenes; un administrador puede consultar cualquiera.
+
+Los seeders de categorías y productos ahora son `POST`, requieren administrador y devuelven 404 en producción.
+
+## Esquema y migraciones
+
+`synchronize` está deshabilitado en todos los entornos. Aplicar migraciones explícitamente:
+
+```bash
+npm run migration:show
 npm run migration:run
-
-# Revertir última migración
-npm run migration:revert
 ```
 
----
+La migración inicial establece tablas `users`, `categories`, `products`, `orders` y `order_items` con claves foráneas, índices y restricciones de stock/precio. **No apuntar esta migración a una base ya poblada con el esquema antiguo sin probar antes una migración de datos en staging.** Hacer backup verificable y un plan de rollback.
 
-## 🌐 Variables de Entorno
-
-Crear un archivo `.env` con las siguientes variables:
-
-```env
-# Base de datos
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=tu_usuario
-DB_PASSWORD=tu_password
-DB_NAME=tu_base_de_datos
-
-# JWT
-JWT_SECRET=tu_jwt_secret
-
-# Cloudinary
-CLOUDINARY_CLOUD_NAME=tu_cloud_name
-CLOUDINARY_API_KEY=tu_api_key
-CLOUDINARY_API_SECRET=tu_api_secret
-
-# Puerto
-PORT=3000
-```
-
----
-
-## 🧪 Testing
+## Calidad
 
 ```bash
-# Tests unitarios
-npm run test
-
-# Tests con coverage
-npm run test:cov
-
-# Tests e2e
-npm run test:e2e
-
-# Tests en modo watch
-npm run test:watch
-```
-
----
-
-## 📝 Validaciones y Middleware
-
-### Interceptores
-- **ExcludePasswordInterceptor**: Excluye automáticamente las contraseñas de las respuestas
-
-### Middleware
-- **LoggerMiddleware**: Registra todas las peticiones HTTP
-
-### Validaciones
-- Uso de `class-validator` para validación de DTOs
-- Validación automática de tipos UUID
-- Validación de archivos subidos
-
----
-
-## 🚀 Despliegue
-
-### Desarrollo
-```bash
-npm run start:dev
-```
-
-### Producción
-```bash
+npm run typecheck
+npm run lint:check
+npm test -- --runInBand
+npm run test:e2e -- --runInBand
 npm run build
-npm run start:prod
 ```
 
----
+El flujo de CI en [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ejecuta instalación reproducible, chequeo de tipos, lint, pruebas, build y auditoría de dependencias.
 
-## 📞 Soporte
+## Despliegue
 
-Para reportar bugs o solicitar nuevas funcionalidades, por favor crear un issue en el repositorio.
+El [Dockerfile](Dockerfile) construye una imagen multi-stage y ejecuta el proceso como el usuario no privilegiado `node`.
 
----
+1. Configure secretos y `NODE_ENV=production` en el proveedor de despliegue.
+2. Ejecute `npm run migration:run:prod` como un job único de la misma imagen antes de liberar nuevas réplicas.
+3. Despliegue la imagen con `node dist/main`.
+4. Configure el balanceador para usar `GET /health/live` como liveness y `GET /health/ready` como readiness.
+5. Active HTTPS en el proxy de borde. La app añade HSTS en producción.
 
-## 📄 Licencia
+Los logs HTTP se emiten como JSON e incluyen `requestId`, método, ruta, código y duración. Los endpoints de salud nunca exponen secretos.
 
-Este proyecto es privado y no tiene licencia específica.
+## Pendiente de integrar antes del cobro real
+
+El modelo incluye estados `pending`, `paid` y `cancelled`, pero no procesa pagos todavía. Antes de cobrar dinero integrar un proveedor de pagos con webhooks firmados, una cola/reintentos y una transición transaccional de estado. Los usuarios se eliminan de forma lógica; para auditoría de negocio y observabilidad operativa aún conviene incorporar eventos de auditoría persistentes, métricas y alertas centralizadas.

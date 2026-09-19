@@ -1,22 +1,30 @@
 import { registerAs } from '@nestjs/config';
-import {config as dotenvConfig} from 'dotenv';
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { join } from 'path';
+import { loadEnvironmentForCli, validateEnvironment } from './env.validation';
+import { Users } from '../modules/users/entities/user.entity';
+import { Products } from '../modules/products/entities/products.entity';
+import { Categories } from '../modules/categories/entities/category.entity';
+import { Orders } from '../modules/orders/entities/order.entity';
+import { OrderItem } from '../modules/orders/entities/orderDetails.entity';
 
+loadEnvironmentForCli();
+const environment = validateEnvironment(process.env);
 
-dotenvConfig({ path: '.development.env'});
-const config = {
+export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
-  username: process.env.DB_USERNAME,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: environment.DB_HOST,
+  port: Number(environment.DB_PORT ?? 5432),
+  username: environment.DB_USERNAME,
+  password: environment.DB_PASSWORD,
+  database: environment.DB_NAME,
+  ssl: environment.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
   dropSchema: false,
-  synchronize: true,
-  entities: ['dist/**/*.entity{.ts,.js}'],
-  migrations: ['dist/migrations/*{.ts,.js}'],
+  synchronize: false,
+  entities: [Users, Products, Categories, Orders, OrderItem],
+  migrations: [join(__dirname, '..', 'migrations', '*{.ts,.js}')],
 };
 
-export default registerAs('typeorm', () => config);
+export default registerAs('database', () => dataSourceOptions);
 
-export const connectionSource = new DataSource(config as DataSourceOptions);
+export const AppDataSource = new DataSource(dataSourceOptions);

@@ -1,25 +1,46 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  ParseIntPipe,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { ApiOperation } from '@nestjs/swagger';
-
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
+import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../../decorators/roles.decorator';
+import { Role } from '../../roles.enum';
 
 @Controller('categories')
 export class CategoriesController {
-  constructor(private readonly categoriesService: CategoriesService) {}
+  constructor(
+    private readonly categoriesService: CategoriesService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @ApiOperation({ summary: 'Generar categorias' })
-  @Get('seeder')
+  @Post('seeder')
+  @ApiBearerAuth()
+  @Roles(Role.Admin)
+  @UseGuards(AuthGuard, RolesGuard)
   seeder() {
+    if (this.configService.get<string>('NODE_ENV') === 'production') {
+      throw new NotFoundException();
+    }
     return this.categoriesService.seeder();
   }
-  
+
   @Get()
   @ApiOperation({ summary: 'Obtener las categorias' })
-  getcategories(@Query('page') page: string, @Query('limit') limit: string) {    
-      if (page && limit) {
-        return this.categoriesService.getcategories (+page, +limit);
-      }
-      return this.categoriesService.getcategories(1,5);
-    } 
-
+  getcategories(
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+  ) {
+    return this.categoriesService.getcategories(page ?? 1, limit ?? 20);
+  }
 }

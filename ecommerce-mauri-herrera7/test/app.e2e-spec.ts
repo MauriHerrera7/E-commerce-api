@@ -1,25 +1,19 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import { ServiceUnavailableException } from '@nestjs/common';
+import { jest } from '@jest/globals';
+import { HealthController } from '../src/modules/health/health.controller';
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
-
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
+describe('Health endpoints', () => {
+  it('reports liveness without a database connection', () => {
+    const controller = new HealthController({} as never);
+    expect(controller.live()).toEqual({ status: 'ok' });
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  it('reports unavailable when the database is down', async () => {
+    const controller = new HealthController({
+      query: jest.fn().mockRejectedValue(new Error('connection refused')),
+    } as never);
+    await expect(controller.ready()).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
   });
 });

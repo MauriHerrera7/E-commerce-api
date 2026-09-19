@@ -6,13 +6,19 @@ import {
   ParseFilePipe,
   ParseUUIDPipe,
   Post,
+  UnsupportedMediaTypeException,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileUploadService } from './file-upload.service';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+} from '@nestjs/swagger';
 import { Role } from 'src/roles.enum';
 import { Roles } from 'src/decorators/roles.decorator';
 import { AuthGuard } from '../auth/auth.guard';
@@ -38,14 +44,29 @@ export class FileUploadController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 1024 * 1024, files: 1 },
+      fileFilter: (_request, file, callback) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+        callback(
+          allowed.includes(file.mimetype)
+            ? null
+            : new UnsupportedMediaTypeException(
+                'Only JPG, PNG, and WEBP images are accepted',
+              ),
+          allowed.includes(file.mimetype),
+        );
+      },
+    }),
+  )
   uploadImage(
     @UploadedFile(
       new ParseFilePipe({
         validators: [
           new MaxFileSizeValidator({
             maxSize: 1024 * 1024,
-            message: 'File is to lage',
+            message: 'File is too large',
           }),
           new FileTypeValidator({
             fileType: /(jpg|jpeg|png|webp)$/,

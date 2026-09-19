@@ -1,7 +1,15 @@
 import { Orders } from 'src/modules/orders/entities/order.entity';
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Exclude } from 'class-transformer';
+import {
+  Column,
+  DeleteDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import type { Relation } from 'typeorm';
 
-@Entity({ name: 'USERS' })
+@Entity({ name: 'users' })
 export class Users {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -20,17 +28,20 @@ export class Users {
   })
   email: string;
 
+  @Exclude()
   @Column({
     type: 'varchar',
     length: 100,
     nullable: false,
+    select: false,
   })
   password: string;
 
   @Column({
-    type: 'bigint',
+    type: 'varchar',
+    length: 30,
   })
-  phone: number;
+  phone: string;
 
   @Column({
     type: 'varchar',
@@ -52,10 +63,13 @@ export class Users {
   @Column({
     type: 'boolean',
     default: false,
-    nullable: true,
+    nullable: false,
   })
   isAdmin: boolean;
 
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamp', nullable: true })
+  deletedAt?: Date | null;
+
   @OneToMany(() => Orders, (order) => order.user)
-  order: Orders[];
+  orders: Relation<Orders[]>;
 }

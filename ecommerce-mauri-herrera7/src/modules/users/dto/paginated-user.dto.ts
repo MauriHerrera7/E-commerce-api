@@ -1,5 +1,5 @@
-import { IsArray, IsNotEmpty, IsNumber } from "class-validator";
-import { Users } from "../entities/user.entity";
+import { IsArray, IsNotEmpty, IsNumber } from 'class-validator';
+import { Users } from '../entities/user.entity';
 
 export class PaginatedUsersDTO {
   @IsNotEmpty()

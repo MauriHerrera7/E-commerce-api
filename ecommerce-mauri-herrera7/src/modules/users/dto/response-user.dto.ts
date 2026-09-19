@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsNumber, IsOptional, IsString } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsOptional, IsString } from 'class-validator';
 
 export class UserResponseDTO {
   @ApiProperty({ example: 'a1b2c3d4-5678-90ab-cdef-1234567890ab' })
@@ -15,8 +15,8 @@ export class UserResponseDTO {
   email: string;
 
   @ApiProperty({ example: 1122334455 })
-  @IsNumber({}, { message: 'The phone must be a number.' })
-  phone: number;
+  @IsString({ message: 'The phone must be a string.' })
+  phone: string;
 
   @ApiPropertyOptional({ example: 'Argentina' })
   @IsOptional()
