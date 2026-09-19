@@ -87,7 +87,7 @@ El flujo de CI en [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ejecuta
 El [Dockerfile](Dockerfile) construye una imagen multi-stage y ejecuta el proceso como el usuario no privilegiado `node`.
 
 1. Configure secretos y `NODE_ENV=production` en el proveedor de despliegue.
-2. Ejecute `npm run migration:run:prod` como un job único de la misma imagen antes de liberar nuevas réplicas.
+2. En Render, el Blueprint ejecuta `npm run migration:run:prod` dentro del contenedor antes de iniciar la API. El deploy falla si una migración falla.
 3. Despliegue la imagen con `node dist/main`.
 4. Configure el balanceador para usar `GET /health/live` como liveness y `GET /health/ready` como readiness.
 5. Active HTTPS en el proxy de borde. La app añade HSTS en producción.

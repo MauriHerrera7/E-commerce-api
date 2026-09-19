@@ -8,8 +8,9 @@ services:
     rootDir: ecommerce-mauri-herrera7
     dockerfilePath: Dockerfile
     dockerContext: .
+    dockerCommand: >-
+      sh -c 'npm run migration:run:prod && exec node dist/main'
     healthCheckPath: /health/ready
-    preDeployCommand: npm run migration:run:prod
     autoDeployTrigger: checksPass
     buildFilter:
       paths:
