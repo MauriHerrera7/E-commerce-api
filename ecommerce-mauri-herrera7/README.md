@@ -1,109 +1,269 @@
-# E-commerce API
+<h1 align="center">🛒 E-commerce REST API</h1>
 
-API REST de e-commerce construida con NestJS, PostgreSQL, TypeORM y Cloudinary.
+<p align="center">
+  <img src="https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/TypeORM-FE0902?style=for-the-badge&logo=typeorm&logoColor=white" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
+  <img src="https://img.shields.io/badge/Cloudinary-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white" />
+  <img src="https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=black" />
+  <img src="https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white" />
+</p>
 
-## Puesta en marcha local
+<p align="center">
+  API REST de backend para una plataforma de e-commerce, construida con NestJS. Implementa autenticación JWT, control de roles, transacciones atómicas con idempotencia en el checkout, carga de imágenes a Cloudinary y despliegue con Docker en Render.
+</p>
 
-Requiere Node.js 22.12+ (se recomienda Node.js 24) y PostgreSQL 16+.
+---
+
+## ✨ Características principales
+
+| Área | Detalle |
+|---|---|
+| **Autenticación** | Registro y login con JWT de corta duración (15 min) y hashing con bcrypt |
+| **Control de acceso** | Sistema de roles `user` / `admin` con guards de NestJS |
+| **Checkout transaccional** | Transacción atómica con bloqueo pesimista de filas (`SELECT FOR UPDATE`) y descuento de stock |
+| **Idempotencia** | Header `Idempotency-Key` en el checkout: reintentos seguros sin duplicar órdenes ni descontar stock dos veces |
+| **Carga de imágenes** | Upload de imágenes (JPG, PNG, WEBP ≤ 1 MB) a Cloudinary por producto |
+| **Paginación** | Parámetros `page` y `limit` en productos, categorías y usuarios |
+| **Migraciones explícitas** | `synchronize` deshabilitado en todos los entornos; migraciones con TypeORM CLI |
+| **Eliminación lógica** | Los usuarios no se borran físicamente de la base de datos |
+| **Health checks** | `/health/live` y `/health/ready` para liveness/readiness de Kubernetes o balanceadores |
+| **Observabilidad** | Logs HTTP en JSON con `requestId`, método, ruta, código y duración |
+| **Rate limiting** | Límite de peticiones por IP en login y registro (configurable) |
+| **CI/CD** | Pipeline en GitHub Actions: typecheck, lint, tests unitarios y e2e, build y auditoría de dependencias |
+| **Despliegue** | Imagen Docker multi-stage + Blueprint de Render (web service + PostgreSQL 16) |
+
+---
+
+## 🏗️ Arquitectura
+
+```
+src/
+├── modules/
+│   ├── auth/           → Login, registro, JWT guard, roles guard
+│   ├── users/          → CRUD de usuarios, eliminación lógica
+│   ├── products/       → Catálogo de productos, paginación, seeder
+│   ├── categories/     → Categorías, seeder
+│   ├── orders/         → Checkout transaccional con idempotencia
+│   ├── file-upload/    → Subida de imágenes a Cloudinary
+│   └── health/         → Liveness y readiness probes
+├── common/
+│   ├── decorators/     → @CurrentUser, etc.
+│   ├── filters/        → HttpExceptionFilter
+│   ├── guards/         → LoginRateLimitGuard
+│   └── middleware/     → SecurityMiddleware
+├── config/             → TypeORM, Cloudinary, validación de env
+├── interceptors/       → ExcludePasswordInterceptor
+├── middleware/         → LoggerMiddleware (JSON)
+├── migrations/         → Migraciones TypeORM versionadas
+└── scripts/            → grant-admin.ts (CLI para promover admins)
+```
+
+---
+
+## 📡 Endpoints
+
+### Auth — `/auth`
+| Método | Ruta | Descripción | Auth |
+|--------|------|-------------|------|
+| `POST` | `/auth/register` | Registrar nuevo usuario | Público |
+| `POST` | `/auth/login` | Iniciar sesión, devuelve JWT | Público |
+
+### Users — `/users`
+| Método | Ruta | Descripción | Auth |
+|--------|------|-------------|------|
+| `GET` | `/users` | Listar todos los usuarios (paginado) | Admin |
+| `GET` | `/users/:id` | Obtener usuario por ID | Admin |
+| `PUT` | `/users/:id` | Actualizar perfil (propio o admin) | JWT |
+| `DELETE` | `/users/:id` | Eliminación lógica | Admin |
+
+### Categories — `/categories`
+| Método | Ruta | Descripción | Auth |
+|--------|------|-------------|------|
+| `GET` | `/categories` | Listar categorías (paginado) | Público |
+| `POST` | `/categories/seeder` | Cargar categorías de prueba | Admin |
+
+### Products — `/products`
+| Método | Ruta | Descripción | Auth |
+|--------|------|-------------|------|
+| `GET` | `/products` | Listar productos (paginado) | Público |
+| `PUT` | `/products/:id` | Actualizar producto | Admin |
+| `POST` | `/products/seeder` | Cargar productos de prueba | Admin |
+
+### Orders — `/orders`
+| Método | Ruta | Descripción | Auth |
+|--------|------|-------------|------|
+| `POST` | `/orders` | Crear orden (requiere `Idempotency-Key`) | JWT |
+| `GET` | `/orders/:id` | Obtener detalle de orden | JWT / Admin |
+
+### File Upload — `/file`
+| Método | Ruta | Descripción | Auth |
+|--------|------|-------------|------|
+| `POST` | `/file/uploadImage/:productId` | Subir imagen de producto a Cloudinary | Admin |
+
+### Health — `/health`
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/health/live` | Liveness probe |
+| `GET` | `/health/ready` | Readiness probe |
+
+---
+
+## 🔒 Seguridad
+
+- **JWT de vida corta** — tokens con expiración de 15 minutos (configurable con `JWT_EXPIRES_IN`)
+- **Hashing con bcrypt** — las contraseñas nunca se almacenan en texto plano
+- **Strip de contraseñas** — el interceptor `ExcludePasswordInterceptor` elimina el campo `password` recursivamente de cualquier respuesta
+- **RBAC** — los guards `AuthGuard` y `RolesGuard` protegen rutas sensibles con decoradores `@Roles()`
+- **Rate limiting por IP** — los endpoints de login y registro tienen límite de peticiones para mitigar ataques de fuerza bruta
+- **HSTS** — el middleware de seguridad añade `Strict-Transport-Security` en producción
+- **Privilegios de administrador por CLI** — no existe endpoint HTTP para otorgar el rol admin; se hace desde consola de confianza:
+  ```bash
+  npm run admin:grant -- user@example.com
+  ```
+
+---
+
+## ⚙️ Flujo del Checkout
+
+```
+POST /orders
+  Header: Idempotency-Key: <uuid>
+  Body: { "items": [{ "productId": "...", "quantity": 2 }] }
+```
+
+1. Valida el `Idempotency-Key` (obligatorio, máx. 128 chars).
+2. Busca si ya existe una orden con esa clave para el usuario → devuelve la existente sin efectos secundarios.
+3. Inicia una **transacción PostgreSQL**:
+   - Bloquea las filas de producto con `SELECT FOR UPDATE` (bloqueo pesimista).
+   - Agrupa ítems duplicados, valida stock.
+   - Persiste la orden con `total`, `unitPrice` y `productName` como snapshot histórico.
+   - Descuenta el inventario.
+4. Maneja la condición de carrera: si dos peticiones concurrentes pasan la verificación inicial simultáneamente, el único que ganó la constraint `UNIQUE` devuelve éxito; el otro recupera la orden existente.
+
+---
+
+## 🚀 Puesta en marcha local
+
+**Requisitos:** Node.js 22.12+ y PostgreSQL 16+
 
 ```bash
+# 1. Instalar dependencias
 npm ci
+
+# 2. Configurar variables de entorno
 Copy-Item .env.example .env
-# Completar .env con credenciales locales válidas
+# Editar .env con tus credenciales
+
+# 3. Ejecutar migraciones
 npm run migration:run
+
+# 4. Iniciar en modo desarrollo
 npm run start:dev
 ```
 
-Para una base local con Docker, puede usarse la plantilla incluida:
+Swagger UI disponible en `http://localhost:3000/api` (solo fuera de producción).
+
+### Con Docker Compose (base de datos local)
 
 ```bash
 docker compose -f docker-compose.example.yml up -d
 ```
 
-La documentación Swagger está disponible sólo fuera de producción, por defecto en `http://localhost:3000/api`.
+---
 
-## Variables de entorno
+## 🌍 Variables de entorno
 
-Copiar [`.env.example`](.env.example). Las variables obligatorias son `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET`, `CLOUD_NAME`, `API_KEY` y `API_SECRET`. Como alternativa, los cuatro valores de base de datos pueden reemplazarse por `DATABASE_URL`, pensado para proveedores administrados como Render.
+Copiar `.env.example` y completar las obligatorias:
 
-- `JWT_SECRET` debe tener por lo menos 32 caracteres y provenir de un gestor de secretos.
-- Configurar `CORS_ORIGINS` sólo si habrá un frontend en otro origen. Swagger servido por la misma API no lo requiere.
-- `DB_SSL=true` habilita SSL para PostgreSQL administrado.
-- No se versionan archivos `.env`; las credenciales expuestas anteriormente deben revocarse y reemplazarse antes de publicar.
+| Variable | Descripción |
+|----------|-------------|
+| `DATABASE_URL` | Cadena de conexión PostgreSQL (alternativa a las variables individuales) |
+| `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | Credenciales de base de datos (local) |
+| `JWT_SECRET` | Mínimo 32 caracteres — usar un gestor de secretos |
+| `JWT_EXPIRES_IN` | Duración del token (ej: `15m`, `1h`) |
+| `CLOUD_NAME`, `API_KEY`, `API_SECRET` | Credenciales de Cloudinary |
+| `CORS_ORIGINS` | Orígenes permitidos separados por coma (solo si hay frontend en otro origen) |
+| `DB_SSL` | `true` para conexiones PostgreSQL administradas con SSL |
+| `ENABLE_SWAGGER` | `true` para exponer Swagger UI |
+| `RATE_LIMIT_WINDOW_MS` | Ventana de rate limiting en ms |
+| `RATE_LIMIT_MAX` | Máximo de requests por ventana |
 
-## Seguridad y autorización
+---
 
-- Contraseñas con bcrypt y respuestas que eliminan `password` recursivamente.
-- JWT de vida corta (`JWT_EXPIRES_IN`, 15 minutos por defecto), validado mediante `Bearer` tokens.
-- Los usuarios sólo pueden editar su propio perfil; administradores pueden gestionar usuarios y catálogo.
-- No hay endpoint HTTP para otorgar permisos de administrador. Tras registrar un usuario, hacerlo administrador desde una consola de confianza:
-
-```bash
-npm run admin:grant -- user@example.com
-```
-
-- Login y registro llevan limitación básica por IP. En un despliegue con varias réplicas se debe sustituir su almacenamiento en memoria por Redis.
-- Las cargas sólo aceptan JPG, PNG o WEBP de hasta 1 MB y Cloudinary las guarda como `image`.
-
-## Órdenes
-
-`POST /orders` requiere un JWT. El usuario se deriva exclusivamente del token; nunca se acepta `userId` en el cuerpo.
-
-```json
-{
-  "items": [{ "productId": "product-uuid", "quantity": 2 }]
-}
-```
-
-El checkout requiere además un header `Idempotency-Key` único por intención de compra (hasta 128 caracteres). El mismo usuario puede reintentar esa clave sin duplicar la orden ni descontar stock otra vez. El checkout combina productos repetidos, bloquea las filas de producto durante la operación, valida stock antes de persistir y descuenta inventario dentro de una transacción. Cada ítem conserva `unitPrice` y `productName` como instantánea histórica. Un cliente sólo puede consultar sus propias órdenes; un administrador puede consultar cualquiera.
-
-Los seeders de categorías y productos ahora son `POST`, requieren administrador y devuelven 404 en producción.
-
-## Esquema y migraciones
-
-`synchronize` está deshabilitado en todos los entornos. Aplicar migraciones explícitamente:
+## 🧪 Tests y calidad
 
 ```bash
-npm run migration:show
-npm run migration:run
+npm run typecheck       # Chequeo de tipos TypeScript
+npm run lint:check      # ESLint
+npm test -- --runInBand # Tests unitarios
+npm run test:e2e -- --runInBand # Tests end-to-end
+npm run build           # Build de producción
 ```
 
-La migración inicial establece tablas `users`, `categories`, `products`, `orders` y `order_items` con claves foráneas, índices y restricciones de stock/precio. **No apuntar esta migración a una base ya poblada con el esquema antiguo sin probar antes una migración de datos en staging.** Hacer backup verificable y un plan de rollback.
+El pipeline de CI en [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ejecuta todos estos pasos automáticamente en cada push.
 
-## Calidad
+---
 
-```bash
-npm run typecheck
-npm run lint:check
-npm test -- --runInBand
-npm run test:e2e -- --runInBand
-npm run build
+## 📦 Despliegue
+
+### Docker
+
+El [Dockerfile](Dockerfile) usa una imagen **multi-stage**:
+1. **Stage `build`** — compila TypeScript y poda dependencias de desarrollo.
+2. **Stage `production`** — imagen mínima que ejecuta el proceso como el usuario no privilegiado `node`.
+
+Al arrancar el contenedor, ejecuta automáticamente las migraciones pendientes antes de iniciar el servidor:
+
+```dockerfile
+CMD ["node", "./node_modules/typeorm/cli.js", "migration:run", "-d", "./dist/config/typeorm.js", "&&", "exec", "node", "dist/main"]
 ```
 
-El flujo de CI en [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ejecuta instalación reproducible, chequeo de tipos, lint, pruebas, build y auditoría de dependencias.
+### Render (Blueprint)
 
-## Despliegue
+El archivo [`render.yaml`](../render.yaml) en la raíz del repositorio provisiona con un clic:
 
-El [Dockerfile](Dockerfile) construye una imagen multi-stage y ejecuta el proceso como el usuario no privilegiado `node`.
+- **Web Service Docker** en Virginia con health check en `/health/ready` y deploy automático solo si el CI pasa.
+- **PostgreSQL 16** en la misma región, conectado por red privada (sin acceso público).
+- **Migraciones automáticas** antes de cada deploy.
 
-1. Configure secretos y `NODE_ENV=production` en el proveedor de despliegue.
-2. En Render, el Blueprint ejecuta `npm run migration:run:prod` dentro del contenedor antes de iniciar la API. El deploy falla si una migración falla.
-3. Despliegue la imagen con `node dist/main`.
-4. Configure el balanceador para usar `GET /health/live` como liveness y `GET /health/ready` como readiness.
-5. Active HTTPS en el proxy de borde. La app añade HSTS en producción.
+---
 
-Los logs HTTP se emiten como JSON e incluyen `requestId`, método, ruta, código y duración. Los endpoints de salud nunca exponen secretos.
+## 🛠️ Stack tecnológico
 
-### Render
+| Tecnología | Uso |
+|-----------|-----|
+| **NestJS 12** | Framework principal, arquitectura modular |
+| **TypeScript 5** | Tipado estático en toda la base de código |
+| **PostgreSQL 16** | Base de datos relacional |
+| **TypeORM 0.3** | ORM, migraciones y transacciones |
+| **JWT + bcrypt** | Autenticación y hashing de contraseñas |
+| **Cloudinary SDK** | Almacenamiento de imágenes en la nube |
+| **Swagger / OpenAPI** | Documentación interactiva de la API |
+| **Docker** | Containerización multi-stage |
+| **Render** | Plataforma de despliegue (PaaS) |
+| **GitHub Actions** | CI/CD |
+| **Jest + Supertest** | Tests unitarios y e2e |
+| **ESLint + Prettier** | Calidad y formato de código |
 
-El Blueprint [`render.yaml`](../render.yaml) está en la raíz del repositorio porque esta API vive en el subdirectorio `ecommerce-mauri-herrera7`. Al crear un **New > Blueprint** en Render y seleccionar este repositorio, provisiona:
+---
 
-- Un Web Service Docker en Virginia, con health check en `/health/ready` y despliegue automático sólo después de que pase CI.
-- Una instancia Render Postgres 16 en la misma región, conectada por red privada. La base no acepta conexiones públicas.
-- Migraciones antes de cada despliegue mediante `npm run migration:run:prod`.
+## ⚠️ Pendiente antes de producción real
 
-Render genera `JWT_SECRET`. Para publicar sólo la API y Swagger no solicita CORS ni Cloudinary; esas variables son opcionales y se configuran después sólo si se agrega frontend en otro origen o carga de imágenes. El Blueprint usa planes administrados mínimos (`0.5c-512mb` web y `0.5c-1g` Postgres); revisarlos en Render antes de crear recursos porque son facturables.
+El modelo de datos incluye los estados `pending`, `paid` y `cancelled`, pero **no procesa pagos reales**. Antes de cobrar dinero:
 
-## Pendiente de integrar antes del cobro real
+- Integrar un proveedor de pagos con webhooks firmados
+- Implementar una cola con reintentos para eventos de pago
+- Agregar transición transaccional de estado de la orden
 
-El modelo incluye estados `pending`, `paid` y `cancelled`, pero no procesa pagos todavía. Antes de cobrar dinero integrar un proveedor de pagos con webhooks firmados, una cola/reintentos y una transición transaccional de estado. Los usuarios se eliminan de forma lógica; para auditoría de negocio y observabilidad operativa aún conviene incorporar eventos de auditoría persistentes, métricas y alertas centralizadas.
+Adicionalmente, para observabilidad completa en producción conviene incorporar:
+- Eventos de auditoría persistentes
+- Métricas centralizadas y alertas
+
+---
+
+## 👤 Autor
+
+**Mauricio Herrera** — [GitHub](https://github.com/MauriHerrera7)
